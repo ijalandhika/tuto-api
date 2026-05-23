@@ -1,0 +1,10 @@
+server:
+  port: 8080
+database:
+  url: postgres://user:password@localhost:5432/tuto_db?sslmode=disable
+redis:
+  url: redis://localhost:6379
+jwt:
+  secret: your-secret-key
+  access_expiry_minutes: 15
+  refresh_expiry_days: 30

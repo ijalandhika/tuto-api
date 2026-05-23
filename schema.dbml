@@ -1,0 +1,398 @@
+// =============================================================================
+// Tuto (Lumio) — Database Schema (DBML)
+// =============================================================================
+// Derived from screens & view-models in tuto/tuto/lib/.
+// Covers: onboarding (parent + kid), learning map, lessons (intro, mini-game,
+// quiz, reward), badges, library, kid profile/settings, parent gate, parent
+// dashboard, weekly report, notifications, link-code pairing.
+//
+// Conventions:
+//   * snake_case columns, plural table names
+//   * uuid PKs, created_at/updated_at audit columns where state mutates
+//   * "l10n_key" columns store the localization key the app already uses
+//     (e.g. mapNodeWhales / subjectScience), so content stays translatable
+// =============================================================================
+
+
+// -----------------------------------------------------------------------------
+// 1. Identity & Account
+// -----------------------------------------------------------------------------
+
+Table parents {
+  id              uuid       [pk]
+  email           varchar    [unique, not null, note: 'pAccount screen']
+  password_hash   varchar    [not null]
+  display_name    varchar    [not null, note: "Parent's full name from pAccount"]
+  marketing_opt_in boolean   [not null, default: false]
+  created_at      timestamp  [not null, default: `now()`]
+  updated_at      timestamp  [not null, default: `now()`]
+
+  Indexes {
+    email [unique]
+  }
+}
+
+Table kids {
+  id              uuid       [pk]
+  parent_id       uuid       [not null, ref: > parents.id]
+  name            varchar    [not null, note: 'pKid / KidRepository.name (e.g. "Maya")']
+  age             int        [not null, note: 'pKid / KidRepository.age']
+  avatar_emoji    varchar(8) [not null, default: '🦊', note: 'kAvatar selection']
+  level           int        [not null, default: 1, note: 'KidRepository.level']
+  stars           int        [not null, default: 0, note: 'TopBarStats / ParentStats']
+  hearts          int        [not null, default: 5, note: 'TopBarStats — kid lives']
+  streak_days     int        [not null, default: 0, note: 'TopBarStats / ParentStats'
+  ]
+  created_at      timestamp  [not null, default: `now()`]
+  updated_at      timestamp  [not null, default: `now()`]
+}
+
+// Link-code device pairing (pConnect → kEnterCode flow)
+Table pairing_codes {
+  id              uuid       [pk]
+  kid_id          uuid       [not null, ref: > kids.id]
+  code            varchar(8) [unique, not null, note: '6-digit code entered on kEnterCode']
+  expires_at      timestamp  [not null]
+  consumed_at     timestamp  [note: 'NULL until kid device redeems']
+  created_at      timestamp  [not null, default: `now()`]
+
+  Indexes {
+    code [unique]
+  }
+}
+
+// Devices a kid is signed in on (used after pairing redemption).
+Table kid_devices {
+  id              uuid       [pk]
+  kid_id          uuid       [not null, ref: > kids.id]
+  device_name     varchar
+  platform        varchar    [note: 'ios | android | web']
+  push_token      varchar    [note: 'Notification screen consent']
+  last_seen_at    timestamp
+  created_at      timestamp  [not null, default: `now()`]
+}
+
+// Parent-gate math puzzles attempts (parent_gate_screen).
+Table parent_gate_attempts {
+  id              uuid       [pk]
+  parent_id       uuid       [not null, ref: > parents.id]
+  a               int        [not null]
+  b               int        [not null]
+  submitted       int
+  succeeded       boolean    [not null]
+  attempted_at    timestamp  [not null, default: `now()`]
+}
+
+
+// -----------------------------------------------------------------------------
+// 2. Onboarding selections — goals, interests, plan
+// -----------------------------------------------------------------------------
+
+// Catalogue of learning goals shown on pGoals (📖 Reading, 🔬 Curious, 🔢 Maths,
+// ⏱ Screen-time, 💪 Confidence, 🌍 World).
+Table goals {
+  id              int        [pk, increment]
+  emoji           varchar(8) [not null]
+  title_key       varchar    [unique, not null, note: 'e.g. goalReadingTitle']
+  sub_key         varchar    [not null]
+  sort_order      int        [not null, default: 0]
+}
+
+Table parent_goals {
+  parent_id       uuid       [ref: > parents.id]
+  goal_id         int        [ref: > goals.id]
+
+  Indexes {
+    (parent_id, goal_id) [pk]
+  }
+}
+
+// Catalogue of kid interests on kInterests (Dinosaurs, Space, Ocean, Science,
+// Heroes, Nature, Art, Music, Sports).
+Table interests {
+  id              int        [pk, increment]
+  emoji           varchar(8) [not null]
+  title_key       varchar    [unique, not null, note: 'e.g. interestDinosaurs']
+  sort_order      int        [not null, default: 0]
+}
+
+Table kid_interests {
+  kid_id          uuid       [ref: > kids.id]
+  interest_id     int        [ref: > interests.id]
+
+  Indexes {
+    (kid_id, interest_id) [pk]
+  }
+}
+
+// pPlan: minutes-per-session + chosen days of the week.
+Table learning_plans {
+  id              uuid       [pk]
+  kid_id          uuid       [unique, not null, ref: > kids.id]
+  minutes_per_day int        [not null, default: 15]
+  days_of_week    int        [not null, default: 31, note: 'Bitmask Mon=1 .. Sun=64 (default Mon-Fri = 31)']
+  created_at      timestamp  [not null, default: `now()`]
+  updated_at      timestamp  [not null, default: `now()`]
+}
+
+// Per-kid app settings (me_screen toggles).
+Table kid_settings {
+  kid_id          uuid       [pk, ref: > kids.id]
+  sounds_on       boolean    [not null, default: true]
+  bedtime_on      boolean    [not null, default: false]
+  notifications_on boolean   [not null, default: false, note: 'Notification opt-in screen']
+  updated_at      timestamp  [not null, default: `now()`]
+}
+
+
+// -----------------------------------------------------------------------------
+// 3. Content catalogue — subjects, lessons (map nodes), library items
+// -----------------------------------------------------------------------------
+
+Table subjects {
+  id              int        [pk, increment]
+  key             varchar    [unique, not null, note: "e.g. 'subjectScience' — used as labelKey across map/library"]
+  emoji           varchar(8)
+  sort_order      int        [not null, default: 0]
+}
+
+// MapNode → a lesson on the zigzag map (map_screen).
+Table lessons {
+  id              uuid       [pk]
+  subject_id      int        [not null, ref: > subjects.id]
+  emoji           varchar(8) [not null, note: 'MapNode.emoji']
+  label_key       varchar    [unique, not null, note: "e.g. 'whales' → mapNodeWhales"]
+  description_key varchar
+  x_offset        int        [not null, default: 0, note: 'MapNode.xOffset for path layout']
+  sort_order      int        [not null, default: 0, note: 'Position along the map path']
+  est_minutes     int        [not null, default: 5]
+  stars_reward    int        [not null, default: 3]
+  created_at      timestamp  [not null, default: `now()`]
+}
+
+// Mini-game (drag/drop/tap) step inside a lesson — mini_game_screen.
+Table mini_games {
+  id              uuid       [pk]
+  lesson_id       uuid       [not null, ref: > lessons.id]
+  prompt_key      varchar    [not null]
+  config_json     json       [note: 'Cards / drop zones / target counts']
+  sort_order      int        [not null, default: 0]
+}
+
+// Quiz step — quiz_screen (multiple choice A/B/C/D, one correct).
+Table quizzes {
+  id              uuid       [pk]
+  lesson_id       uuid       [not null, ref: > lessons.id]
+  question_key    varchar    [not null]
+  sort_order      int        [not null, default: 0]
+}
+
+Table quiz_options {
+  id              uuid       [pk]
+  quiz_id         uuid       [not null, ref: > quizzes.id]
+  letter          varchar(1) [not null, note: 'A/B/C/D — QuizOption.letter']
+  label_key       varchar    [not null]
+  is_correct      boolean    [not null, default: false]
+
+  Indexes {
+    (quiz_id, letter) [unique]
+  }
+}
+
+// Library collections + items (library_screen).
+// "Continue learning" rail is derived from lesson_progress.in_progress = true.
+Table library_collections {
+  id              uuid       [pk]
+  title_key       varchar    [unique, not null, note: 'e.g. libColAnimals']
+  subtitle_key    varchar    [not null]
+  sort_order      int        [not null, default: 0]
+}
+
+Table library_items {
+  id              uuid       [pk]
+  collection_id   uuid       [not null, ref: > library_collections.id]
+  subject_id      int        [ref: > subjects.id]
+  title_key       varchar    [not null, note: 'e.g. libItemWhales']
+  subject_key     varchar    [note: 'Free-text subject label key (subjectScience…)']
+  level_key       varchar    [note: 'e.g. levelNew | levelEasy']
+  minutes         int        [not null]
+  sort_order      int        [not null, default: 0]
+  created_at      timestamp  [not null, default: `now()`]
+}
+
+
+// -----------------------------------------------------------------------------
+// 4. Kid progress — per-lesson, per-library-item, badges, daily activity
+// -----------------------------------------------------------------------------
+
+Enum lesson_state {
+  locked
+  current
+  done
+}
+
+// Drives MapNode.state per kid.
+Table lesson_progress {
+  id              uuid       [pk]
+  kid_id          uuid       [not null, ref: > kids.id]
+  lesson_id       uuid       [not null, ref: > lessons.id]
+  state           lesson_state [not null, default: 'locked']
+  stars_earned    int        [not null, default: 0]
+  best_score      int
+  attempts        int        [not null, default: 0]
+  first_started_at timestamp
+  completed_at    timestamp
+  updated_at      timestamp  [not null, default: `now()`]
+
+  Indexes {
+    (kid_id, lesson_id) [unique]
+  }
+}
+
+// Records of individual quiz/mini-game attempts (audit + reward calc).
+Table lesson_attempts {
+  id              uuid       [pk]
+  kid_id          uuid       [not null, ref: > kids.id]
+  lesson_id       uuid       [not null, ref: > lessons.id]
+  quiz_id         uuid       [ref: > quizzes.id]
+  selected_option_id uuid    [ref: > quiz_options.id]
+  is_correct      boolean
+  duration_ms     int
+  attempted_at    timestamp  [not null, default: `now()`]
+}
+
+// Library-item progress drives the "Continue" rail (in_progress=true).
+Table library_progress {
+  kid_id          uuid       [ref: > kids.id]
+  library_item_id uuid       [ref: > library_items.id]
+  in_progress     boolean    [not null, default: false]
+  minutes_left    int
+  finished_at     timestamp
+  updated_at      timestamp  [not null, default: `now()`]
+
+  Indexes {
+    (kid_id, library_item_id) [pk]
+  }
+}
+
+// Badge catalogue — badges_screen.
+Table badges {
+  id              uuid       [pk]
+  emoji           varchar(8) [not null]
+  name_key        varchar    [unique, not null, note: 'e.g. badgeStarCounter']
+  sub_key         varchar    [not null]
+  sort_order      int        [not null, default: 0]
+}
+
+Table kid_badges {
+  kid_id          uuid       [ref: > kids.id]
+  badge_id        uuid       [ref: > badges.id]
+  earned_at       timestamp  [not null, default: `now()`]
+  fresh           boolean    [not null, default: true, note: 'BadgeItem.fresh — unseen by kid yet']
+
+  Indexes {
+    (kid_id, badge_id) [pk]
+  }
+}
+
+// Per-day activity rollup — feeds ParentStats.weeklyBars (7-day chart).
+Table daily_activity {
+  id              uuid       [pk]
+  kid_id          uuid       [not null, ref: > kids.id]
+  activity_date   date       [not null]
+  minutes         int        [not null, default: 0]
+  lessons_done    int        [not null, default: 0]
+  stars_earned    int        [not null, default: 0]
+  hearts_lost     int        [not null, default: 0]
+
+  Indexes {
+    (kid_id, activity_date) [unique]
+  }
+}
+
+// Per-subject progress shown on Parent Dashboard (subjectProgress.value 0..1).
+Table subject_progress {
+  kid_id          uuid       [ref: > kids.id]
+  subject_id      int        [ref: > subjects.id]
+  value           decimal(4,3) [not null, default: 0, note: '0.0 – 1.0 progress bar']
+  updated_at      timestamp  [not null, default: `now()`]
+
+  Indexes {
+    (kid_id, subject_id) [pk]
+  }
+}
+
+
+// -----------------------------------------------------------------------------
+// 5. Parent reporting — weekly report (weekly_report_screen)
+// -----------------------------------------------------------------------------
+
+Table weekly_reports {
+  id              uuid       [pk]
+  kid_id          uuid       [not null, ref: > kids.id]
+  week_start      date       [not null, note: 'Monday of ISO week']
+  minutes_total   int        [not null, default: 0]
+  lessons_total   int        [not null, default: 0]
+  stars_total     int        [not null, default: 0]
+  badges_earned   int        [not null, default: 0]
+  generated_at    timestamp  [not null, default: `now()`]
+
+  Indexes {
+    (kid_id, week_start) [unique]
+  }
+}
+
+Table weekly_report_highlights {
+  id              uuid       [pk]
+  weekly_report_id uuid      [not null, ref: > weekly_reports.id]
+  emoji           varchar(8) [not null]
+  text_key        varchar    [not null, note: 'weeklyHighlight1…']
+  sort_order      int        [not null, default: 0]
+}
+
+
+// -----------------------------------------------------------------------------
+// 6. Notifications (Notification screen + push delivery)
+// -----------------------------------------------------------------------------
+
+Enum notification_kind {
+  daily_reminder
+  weekly_report
+  badge_earned
+  bedtime
+  parent_summary
+}
+
+Table notifications {
+  id              uuid       [pk]
+  parent_id       uuid       [ref: > parents.id]
+  kid_id          uuid       [ref: > kids.id]
+  kind            notification_kind [not null]
+  title           varchar    [not null]
+  body            varchar
+  payload_json    json
+  sent_at         timestamp
+  read_at         timestamp
+  created_at      timestamp  [not null, default: `now()`]
+}
+
+
+// -----------------------------------------------------------------------------
+// 7. Sessions (auth) — wraps both parent + kid sign-ins
+// -----------------------------------------------------------------------------
+
+Enum actor_type {
+  parent
+  kid
+}
+
+Table auth_sessions {
+  id              uuid       [pk]
+  actor_type      actor_type [not null]
+  actor_id        uuid       [not null, note: 'parent.id or kid.id depending on actor_type']
+  token_hash      varchar    [unique, not null]
+  device_id       uuid       [ref: > kid_devices.id]
+  issued_at       timestamp  [not null, default: `now()`]
+  expires_at      timestamp  [not null]
+  revoked_at      timestamp
+}
