@@ -1,0 +1,78 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "internal/auth/queries/"
+    schema: "migrations/"
+    gen:
+      go:
+        package: "auth"
+        out: "internal/auth/db/"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_db_tags: true
+
+  # - engine: "postgresql"
+  #   queries: "internal/kid/queries/"
+  #   schema: "migrations/"
+  #   gen:
+  #     go:
+  #       package: "kid"
+  #       out: "internal/kid/db/"
+  #       sql_package: "pgx/v5"
+  #       emit_json_tags: true
+  #       emit_db_tags: true
+
+  # - engine: "postgresql"
+  #   queries: "internal/content/queries/"
+  #   schema: "migrations/"
+  #   gen:
+  #     go:
+  #       package: "content"
+  #       out: "internal/content/db/"
+  #       sql_package: "pgx/v5"
+  #       emit_json_tags: true
+  #       emit_db_tags: true
+
+  # - engine: "postgresql"
+  #   queries: "internal/progress/queries/"
+  #   schema: "migrations/"
+  #   gen:
+  #     go:
+  #       package: "progress"
+  #       out: "internal/progress/db/"
+  #       sql_package: "pgx/v5"
+  #       emit_json_tags: true
+  #       emit_db_tags: true
+
+  # - engine: "postgresql"
+  #   queries: "internal/badge/queries/"
+  #   schema: "migrations/"
+  #   gen:
+  #     go:
+  #       package: "badge"
+  #       out: "internal/badge/db/"
+  #       sql_package: "pgx/v5"
+  #       emit_json_tags: true
+  #       emit_db_tags: true
+
+  # - engine: "postgresql"
+  #   queries: "internal/dashboard/queries/"
+  #   schema: "migrations/"
+  #   gen:
+  #     go:
+  #       package: "dashboard"
+  #       out: "internal/dashboard/db/"
+  #       sql_package: "pgx/v5"
+  #       emit_json_tags: true
+  #       emit_db_tags: true
+
+  # - engine: "postgresql"
+  #   queries: "internal/pairing/queries/"
+  #   schema: "migrations/"
+  #   gen:
+  #     go:
+  #       package: "pairing"
+  #       out: "internal/pairing/db/"
+  #       sql_package: "pgx/v5"
+  #       emit_json_tags: true
+  #       emit_db_tags: true

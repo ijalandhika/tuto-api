@@ -36,6 +36,24 @@ pkg/
 migrations/           # SQL migration files
 ```
 
+## Prerequisites
+
+Make sure the following tools are installed before running the project:
+
+| Tool | Install | Purpose |
+|---|---|---|
+| Go 1.21+ | `brew install go` | Language runtime |
+| Docker | [docker.com](https://www.docker.com/products/docker-desktop/) | Run infra (Postgres, Redis, MinIO) |
+| golang-migrate | `brew install golang-migrate` | Run database migrations |
+| sqlc | `brew install sqlc` | Generate type-safe Go from SQL |
+| golangci-lint | `brew install golangci-lint` | Linter |
+| yq | `brew install yq` | YAML parser (used by migrate script) |
+
+Install all at once:
+```bash
+brew install go golang-migrate sqlc golangci-lint yq
+```
+
 ## Getting Started
 
 ### 1. Start infrastructure
@@ -53,7 +71,7 @@ cp config.example.yml config.yml
 ### 3. Run migrations
 
 ```bash
-migrate -path migrations/ -database "postgres://user:password@localhost:5432/tuto_db?sslmode=disable" up
+./migrate.sh up
 ```
 
 ### 4. Run the server
