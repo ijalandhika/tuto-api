@@ -9,10 +9,12 @@ func OK(w http.ResponseWriter, data any) {
 	write(w, http.StatusOK, Response{Data: data})
 }
 
-func Created(w http.ResponseWriter, data any) {}
+func Created(w http.ResponseWriter, data any) {
+	write(w, http.StatusCreated, Response{Data: data})
+}
 
 func NoContent(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNoContent)
+	write(w, http.StatusNoContent, Response{})
 }
 
 func BadRequest(w http.ResponseWriter, msg string) {

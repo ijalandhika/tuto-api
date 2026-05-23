@@ -1,16 +1,5 @@
 package auth
 
-import "time"
-
-type Parent struct {
-	ID             string    `db:"id"`
-	Email          string    `db:"email"`
-	PasswordHash   string    `db:"password_hash"`
-	MarketingOptIn bool      `db:"marketing_opt_in"`
-	CreatedAt      time.Time `db:"created_at"`
-	UpdatedAt      time.Time `db:"updated_at"`
-}
-
 type SignupRequest struct {
 	Email          string `json:"email" validate:"required,email"`
 	Password       string `json:"password" validate:"required,min=8"`

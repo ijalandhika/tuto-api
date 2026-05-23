@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -59,10 +59,7 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.RequestID)
 
-	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	})
+	registerRoutes(router, pool, cfg)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),

@@ -5,7 +5,7 @@ sql:
     schema: "migrations/"
     gen:
       go:
-        package: "auth"
+        package: "db"
         out: "internal/auth/db/"
         sql_package: "pgx/v5"
         emit_json_tags: true
@@ -16,7 +16,7 @@ sql:
   #   schema: "migrations/"
   #   gen:
   #     go:
-  #       package: "kid"
+  #       package: "db"
   #       out: "internal/kid/db/"
   #       sql_package: "pgx/v5"
   #       emit_json_tags: true
@@ -27,7 +27,7 @@ sql:
   #   schema: "migrations/"
   #   gen:
   #     go:
-  #       package: "content"
+  #       package: "db"
   #       out: "internal/content/db/"
   #       sql_package: "pgx/v5"
   #       emit_json_tags: true
@@ -38,7 +38,7 @@ sql:
   #   schema: "migrations/"
   #   gen:
   #     go:
-  #       package: "progress"
+  #       package: "db"
   #       out: "internal/progress/db/"
   #       sql_package: "pgx/v5"
   #       emit_json_tags: true
@@ -49,7 +49,7 @@ sql:
   #   schema: "migrations/"
   #   gen:
   #     go:
-  #       package: "badge"
+  #       package: "db"
   #       out: "internal/badge/db/"
   #       sql_package: "pgx/v5"
   #       emit_json_tags: true
@@ -60,7 +60,7 @@ sql:
   #   schema: "migrations/"
   #   gen:
   #     go:
-  #       package: "dashboard"
+  #       package: "db"
   #       out: "internal/dashboard/db/"
   #       sql_package: "pgx/v5"
   #       emit_json_tags: true
@@ -71,7 +71,7 @@ sql:
   #   schema: "migrations/"
   #   gen:
   #     go:
-  #       package: "pairing"
+  #       package: "db"
   #       out: "internal/pairing/db/"
   #       sql_package: "pgx/v5"
   #       emit_json_tags: true
