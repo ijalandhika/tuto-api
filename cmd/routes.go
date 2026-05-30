@@ -21,4 +21,7 @@ func registerRoutes(r *chi.Mux, pool *pgxpool.Pool, cfg *config.Config) {
 	})
 
 	r.Post("/auth/signup", authHandler.Signup)
+	r.Post("/auth/login", authHandler.Login)
+	r.Post("/auth/refresh", authHandler.Refresh)
+	r.Post("/auth/logout", authHandler.Logout)
 }

@@ -30,6 +30,54 @@ func NewService(queries *db.Queries, cfg config.JWTConfig) *Service {
 	}
 }
 
+func (s *Service) Refresh(ctx context.Context, req RefreshRequest) (*AuthResponse, error) {
+	hash := hashToken(req.RefreshToken)
+
+	session, err := s.queries.GetSessionByTokenHash(ctx, hash)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid or expired refresh token")
+	}
+
+	if err := s.queries.RevokeSession(ctx, hash); err != nil {
+		return nil, fmt.Errorf("Revoke session: %w", err)
+	}
+
+	actorId, err := uuid.FromBytes(session.ActorID.Bytes[:])
+	if err != nil {
+		return nil, fmt.Errorf("parse actor ID: %w", err)
+	}
+
+	return s.generateTokens(ctx, actorId.String(), string(session.ActorType))
+}
+
+func (s *Service) Login(ctx context.Context, req LoginRequest) (*AuthResponse, error) {
+	parent, err := s.queries.GetParentByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid email or password")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(parent.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, fmt.Errorf("Invalid email or password")
+	}
+
+	parentId, err := uuid.FromBytes(parent.ID.Bytes[:])
+	if err != nil {
+		return nil, fmt.Errorf("parse parent ID: %w", err)
+	}
+
+	return s.generateTokens(ctx, parentId.String(), string(db.ActorTypeParent))
+}
+
+func (s *Service) Logout(ctx context.Context, req LogoutRequest) error {
+	hash := hashToken(req.RefreshToken)
+
+	if err := s.queries.RevokeSession(ctx, hash); err != nil {
+		return fmt.Errorf("Revoke session: %w", err)
+	}
+
+	return nil
+}
+
 func (s *Service) Signup(ctx context.Context, req SignupRequest) (*AuthResponse, error) {
 	// check if email already taken
 	_, err := s.queries.GetParentByEmail(ctx, req.Email)

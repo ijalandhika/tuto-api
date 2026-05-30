@@ -14,6 +14,11 @@ SELECT * FROM parents
 WHERE email = $1 
 LIMIT 1;
 
+-- name: GetParentByID :one 
+SELECT * FROM parents 
+WHERE id = $1
+LIMIT 1;
+
 -- name: CreateSession :one 
 INSERT INTO auth_sessions (
     actor_type, 

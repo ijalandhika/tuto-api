@@ -114,6 +114,27 @@ func (q *Queries) GetParentByEmail(ctx context.Context, email string) (Parent, e
 	return i, err
 }
 
+const getParentByID = `-- name: GetParentByID :one
+SELECT id, email, password_hash, display_name, marketing_opt_in, created_at, updated_at FROM parents 
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetParentByID(ctx context.Context, id pgtype.UUID) (Parent, error) {
+	row := q.db.QueryRow(ctx, getParentByID, id)
+	var i Parent
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.DisplayName,
+		&i.MarketingOptIn,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getSessionByTokenHash = `-- name: GetSessionByTokenHash :one
 SELECT id, actor_type, actor_id, token_hash, device_id, expires_at, revoked_at, created_at FROM auth_sessions
 WHERE token_hash = $1
